@@ -1,16 +1,29 @@
-import mongoose from 'mongoose';
+import { Sequelize } from 'sequelize';
+import 'dotenv/config';
 
+// Initialize Sequelize
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASS,
+  {
+    host: process.env.DB_HOST,
+    dialect: process.env.DB_DIALECT || 'mysql',
+    port: process.env.DB_PORT || 3306,
+    logging: false,
+  }
+);
+
+// Function to connect to the database
 const connectDB = async () => {
   try {
-    const connection = await mongoose.connect(process.env.MONGO_URI);
-    // console.log(
-    //   `MongoDB connected successfully on host: ${connection.connection.host}, database: ${connection.connection.db.databaseName}`
-    // );
-    return connection;
+    await sequelize.authenticate();
+    console.log('MySQL Database connected!');
   } catch (error) {
-    console.error(`MongoDB connection error: ${error.message}`);
+    console.error('Database connection error:', error);
     process.exit(1);
   }
 };
 
-export default connectDB;
+// ✅ Export connectDB as named export and sequelize as named export
+export { connectDB, sequelize };

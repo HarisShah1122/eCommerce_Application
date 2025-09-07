@@ -1,4 +1,6 @@
-import express, { query } from 'express';
+import express from 'express';
+const { query } = express;
+
 import {
   getProducts,
   getProduct,
@@ -10,7 +12,8 @@ import {
 } from '../controllers/productController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 import validateRequest from '../middleware/validator.js';
-import {body, check, param} from 'express-validator';
+import { body, check, param } from 'express-validator';
+
 
 const router = express.Router();
 
