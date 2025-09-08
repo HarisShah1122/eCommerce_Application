@@ -1,211 +1,171 @@
-import Product from '../models/productModel.js';
-import { deleteFile } from '../utils/file.js';
+import { Product } from "../models/productModel.js";
+import { deleteFile } from "../utils/file.js";
+import { Op } from "sequelize";
 
-// @desc     Fetch All Products
-// @method   GET
-// @endpoint /api/v1/products?limit=2&skip=0
-// @access   Public
+// @desc    Fetch all products (pagination + search)
 const getProducts = async (req, res, next) => {
   try {
-    const total = await Product.countDocuments();
-    const maxLimit = process.env.PAGINATION_MAX_LIMIT;
-    const maxSkip = total === 0 ? 0 : total - 1;
+    const maxLimit = Number(process.env.PAGINATION_MAX_LIMIT) || 20;
     const limit = Number(req.query.limit) || maxLimit;
     const skip = Number(req.query.skip) || 0;
-    const search = req.query.search || '';
+    const search = req.query.search || "";
 
-    const products = await Product.find({
-      name: { $regex: search, $options: 'i' }
-    })
-      .limit(limit > maxLimit ? maxLimit : limit)
-      .skip(skip > maxSkip ? maxSkip : skip < 0 ? 0 : skip);
-
-    if (!products || products.length === 0) {
-      res.statusCode = 404;
-      throw new Error('Products not found!');
-    }
+    const { count: total, rows: products } = await Product.findAndCountAll({
+      where: { name: { [Op.like]: `%${search}%` } },
+      limit: limit > maxLimit ? maxLimit : limit,
+      offset: skip < 0 ? 0 : skip,
+    });
 
     res.status(200).json({
       products,
       total,
       maxLimit,
-      maxSkip
+      maxSkip: total === 0 ? 0 : total - 1,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc     Fetch top products
-// @method   GET
-// @endpoint /api/v1/products/top
-// @access   Public
+// @desc    Fetch top products
 const getTopProducts = async (req, res, next) => {
   try {
-    const products = await Product.find({}).sort({ rating: -1 }).limit(3);
-
-    if (!products) {
-      res.statusCode = 404;
-      throw new Error('Product not found!');
-    }
-
+    const products = await Product.findAll({
+      order: [["rating", "DESC"]],
+      limit: 3,
+    });
     res.status(200).json(products);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc     Fetch Single Product
-// @method   GET
-// @endpoint /api/v1/products/:id
-// @access   Public
+// @desc    Fetch single product
 const getProduct = async (req, res, next) => {
   try {
-    const { id: productId } = req.params;
-    const product = await Product.findById(productId);
-
+    const product = await Product.findByPk(req.params.id);
     if (!product) {
-      res.statusCode = 404;
-      throw new Error('Product not found!');
+      res.status(404);
+      throw new Error("Product not found!");
     }
-
     res.status(200).json(product);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc     Create product
-// @method   POST
-// @endpoint /api/v1/products
-// @access   Private/Admin
+// @desc    Create product
 const createProduct = async (req, res, next) => {
   try {
     const { name, image, description, brand, category, price, countInStock } =
       req.body;
-    console.log(req.file);
-    const product = new Product({
-      user: req.user._id,
+
+    const product = await Product.create({
+      userId: req.user.id,
       name,
       image,
       description,
       brand,
       category,
       price,
-      countInStock
+      countInStock,
     });
-    const createdProduct = await product.save();
 
-    res.status(200).json({ message: 'Product created', createdProduct });
+    res.status(201).json({ message: "Product created", product });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc     Update product
-// @method   PUT
-// @endpoint /api/v1/products/:id
-// @access   Private/Admin
+// @desc    Update product
 const updateProduct = async (req, res, next) => {
   try {
-    const { name, image, description, brand, category, price, countInStock } =
-      req.body;
-
-    const product = await Product.findById(req.params.id);
-
+    const product = await Product.findByPk(req.params.id);
     if (!product) {
-      res.statusCode = 404;
-      throw new Error('Product not found!');
+      res.status(404);
+      throw new Error("Product not found!");
     }
 
-    // Save the current image path before updating
     const previousImage = product.image;
 
-    product.name = name || product.name;
-    product.image = image || product.image;
-    product.description = description || product.description;
-    product.brand = brand || product.brand;
-    product.category = category || product.category;
-    product.price = price || product.price;
-    product.countInStock = countInStock || product.countInStock;
+    await product.update({
+      name: req.body.name || product.name,
+      image: req.body.image || product.image,
+      description: req.body.description || product.description,
+      brand: req.body.brand || product.brand,
+      category: req.body.category || product.category,
+      price: req.body.price || product.price,
+      countInStock: req.body.countInStock || product.countInStock,
+    });
 
-    const updatedProduct = await product.save();
-
-    // Delete the previous image if it exists and if it's different from the new image
-    if (previousImage && previousImage !== updatedProduct.image) {
+    if (previousImage && previousImage !== product.image) {
       deleteFile(previousImage);
     }
 
-    res.status(200).json({ message: 'Product updated', updatedProduct });
+    res.status(200).json({ message: "Product updated", product });
   } catch (error) {
     next(error);
   }
 };
 
 // @desc    Delete product
-// @method   DELETE
-// @endpoint /api/v1/products/:id
-// @access   Admin
 const deleteProduct = async (req, res, next) => {
   try {
-    const { id: productId } = req.params;
-    const product = await Product.findById(productId);
-
+    const product = await Product.findByPk(req.params.id);
     if (!product) {
-      res.statusCode = 404;
-      throw new Error('Product not found!');
+      res.status(404);
+      throw new Error("Product not found!");
     }
-    await Product.deleteOne({ _id: product._id });
-    deleteFile(product.image); // Remove upload file
 
-    res.status(200).json({ message: 'Product deleted' });
+    await product.destroy();
+    deleteFile(product.image);
+
+    res.status(200).json({ message: "Product deleted" });
   } catch (error) {
     next(error);
   }
 };
 
 // @desc    Create product review
-// @method   POST
-// @endpoint /api/v1/products/reviews/:id
-// @access   Admin
 const createProductReview = async (req, res, next) => {
   try {
-    const { id: productId } = req.params;
     const { rating, comment } = req.body;
-
-    const product = await Product.findById(productId);
+    const product = await Product.findByPk(req.params.id);
 
     if (!product) {
-      res.statusCode = 404;
-      throw new Error('Product not found!');
+      res.status(404);
+      throw new Error("Product not found!");
     }
 
-    const alreadyReviewed = product.reviews.find(
-      review => review.user._id.toString() === req.user._id.toString()
-    );
+    const reviews = product.reviews || [];
+
+    const alreadyReviewed = reviews.find((r) => r.userId === req.user.id);
 
     if (alreadyReviewed) {
-      res.statusCode = 400;
-      throw new Error('Product already reviewed');
+      res.status(400);
+      throw new Error("Product already reviewed");
     }
 
     const review = {
-      user: req.user,
+      userId: req.user.id,
       name: req.user.name,
       rating: Number(rating),
-      comment
+      comment,
     };
 
-    product.reviews = [...product.reviews, review];
+    reviews.push(review);
 
-    product.rating =
-      product.reviews.reduce((acc, review) => acc + review.rating, 0) /
-      product.reviews.length;
-    product.numReviews = product.reviews.length;
+    const numReviews = reviews.length;
+    const avgRating =
+      reviews.reduce((acc, r) => acc + r.rating, 0) / numReviews;
 
-    await product.save();
+    await product.update({
+      reviews,
+      numReviews,
+      rating: avgRating,
+    });
 
-    res.status(201).json({ message: 'Review added' });
+    res.status(201).json({ message: "Review added" });
   } catch (error) {
     next(error);
   }
@@ -218,5 +178,5 @@ export {
   updateProduct,
   deleteProduct,
   createProductReview,
-  getTopProducts
+  getTopProducts,
 };

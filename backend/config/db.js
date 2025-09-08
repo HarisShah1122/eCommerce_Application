@@ -1,5 +1,5 @@
-import { Sequelize } from 'sequelize';
-import 'dotenv/config';
+import { Sequelize } from "sequelize";
+import "dotenv/config";
 
 // Initialize Sequelize
 const sequelize = new Sequelize(
@@ -8,7 +8,7 @@ const sequelize = new Sequelize(
   process.env.DB_PASS,
   {
     host: process.env.DB_HOST,
-    dialect: process.env.DB_DIALECT || 'mysql',
+    dialect: process.env.DB_DIALECT || "mysql",
     port: process.env.DB_PORT || 3306,
     logging: false,
   }
@@ -18,12 +18,12 @@ const sequelize = new Sequelize(
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    console.log('MySQL Database connected!');
+    console.log("MySQL Database connected!");
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.error("Database connection error:", error);
     process.exit(1);
   }
 };
 
-// ✅ Export connectDB as named export and sequelize as named export
+// Export as **named exports**
 export { connectDB, sequelize };

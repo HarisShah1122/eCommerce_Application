@@ -12,11 +12,12 @@ import { addCurrency } from '../utils/addCurrency';
 
 const ProfilePage = () => {
   const { data: orders, isLoading, error } = useGetMyOrdersQuery();
+
   return (
     <>
       <Row>
         <Col md={3}>
-          <Meta title={'User Profile'} />
+          <Meta title="User Profile" />
           <h2>My Profile</h2>
           <ProfileForm />
         </Col>
@@ -25,11 +26,11 @@ const ProfilePage = () => {
           {isLoading ? (
             <Loader />
           ) : error ? (
-            <Message variant='danger'>
+            <Message variant="danger">
               {error?.data?.message || error.error}
             </Message>
           ) : (
-            <Table striped hover responsive size='sm'>
+            <Table striped hover responsive size="sm">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -41,7 +42,7 @@ const ProfilePage = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.map(order => (
+                {orders?.map((order) => (
                   <tr key={order._id}>
                     <td>{order._id}</td>
                     <td>{new Date(order.createdAt).toLocaleDateString()}</td>
@@ -62,7 +63,7 @@ const ProfilePage = () => {
                     </td>
                     <td>
                       <LinkContainer to={`/order/${order._id}`}>
-                        <Button className='btn-sm' variant='info'>
+                        <Button className="btn-sm" variant="info">
                           Details
                         </Button>
                       </LinkContainer>

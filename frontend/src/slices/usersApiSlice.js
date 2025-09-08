@@ -1,95 +1,176 @@
-import { USERS_URL } from '../constants';
 import { apiSlice } from './apiSlice';
+import { USERS_URL } from '../constants';
 
 export const usersApiSlice = apiSlice.injectEndpoints({
-  endpoints: builder => ({
+  endpoints: (builder) => ({
     login: builder.mutation({
-      query: data => ({
+      query: (data) => ({
         url: `${USERS_URL}/login`,
         method: 'POST',
-        body: data
+        body: data,
       }),
-      invalidatesTags: ['User']
+      invalidatesTags: ['User'],
     }),
     logout: builder.mutation({
       query: () => ({
         url: `${USERS_URL}/logout`,
-        method: 'POST'
+        method: 'POST',
       }),
-      invalidatesTags: ['User']
+      invalidatesTags: ['User'],
     }),
     register: builder.mutation({
-      query: data => ({
+      query: (data) => ({
         url: `${USERS_URL}`,
         method: 'POST',
-        body: data
+        body: data,
       }),
-      invalidatesTags: ['User']
+      invalidatesTags: ['User'],
     }),
     newPasswordRequest: builder.mutation({
-      query: data => ({
+      query: (data) => ({
         url: `${USERS_URL}/reset-password/request`,
         method: 'POST',
-        body: data
+        body: data,
       }),
-      invalidatesTags: ['User']
+      invalidatesTags: ['User'],
     }),
     resetPassword: builder.mutation({
       query: ({ userId, token, password }) => ({
         url: `${USERS_URL}/reset-password/reset/${userId}/${token}`,
         method: 'POST',
-        body: { password }
+        body: { password },
       }),
-      invalidatesTags: ['User']
+      invalidatesTags: ['User'],
     }),
     profile: builder.mutation({
-      query: data => ({
+      query: (data) => ({
         url: `${USERS_URL}/profile`,
         method: 'PUT',
-        body: data
+        body: data,
       }),
-      invalidatesTags: ['User']
+      invalidatesTags: ['User'],
     }),
     getUserProfile: builder.query({
-      query: async () => ({
-        url: `${USERS_URL}/profile`
+      query: () => ({
+        url: `${USERS_URL}/profile`,
+        method: 'GET', // Explicitly specify method
       }),
-      providesTags: ['User']
+      providesTags: ['User'],
     }),
     getUsers: builder.query({
       query: () => ({
-        url: USERS_URL
+        url: `${USERS_URL}`,
+        method: 'GET',
       }),
-      providesTags: ['User']
+      providesTags: ['User'],
     }),
     admins: builder.query({
       query: () => ({
-        url: `${USERS_URL}/admins`
+        url: `${USERS_URL}/admins`,
+        method: 'GET',
       }),
-      providesTags: ['User']
+      providesTags: ['User'],
     }),
     getUserById: builder.query({
-      query: userId => ({
-        url: `${USERS_URL}/${userId}`
+      query: (userId) => ({
+        url: `${USERS_URL}/${userId}`,
+        method: 'GET',
       }),
-      providesTags: ['User']
+      providesTags: ['User'],
     }),
     deleteUser: builder.mutation({
-      query: userId => ({
+      query: (userId) => ({
         url: `${USERS_URL}/${userId}`,
-        method: 'DELETE'
+        method: 'DELETE',
       }),
-      invalidatesTags: ['User']
+      invalidatesTags: ['User'],
     }),
     updateUser: builder.mutation({
       query: ({ userId, ...userData }) => ({
         url: `${USERS_URL}/${userId}`,
         method: 'PUT',
-        body: { ...userData }
+        body: userData,
       }),
-      invalidatesTags: ['User']
-    })
-  })
+      invalidatesTags: ['User'],
+    }),
+  }),
+});
+
+// Add token to headers for protected routes
+export const enhancedUsersApiSlice = usersApiSlice.enhanceEndpoints({
+  addTagTypes: ['User'],
+  endpoints: {
+    profile: {
+      invalidatesTags: ['User'],
+      prepareHeaders: (headers, { getState }) => {
+        const token = getState().auth.userInfo?.token;
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+        return headers;
+      },
+    },
+    getUserProfile: {
+      providesTags: ['User'],
+      prepareHeaders: (headers, { getState }) => {
+        const token = getState().auth.userInfo?.token;
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+        return headers;
+      },
+    },
+    getUsers: {
+      providesTags: ['User'],
+      prepareHeaders: (headers, { getState }) => {
+        const token = getState().auth.userInfo?.token;
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+        return headers;
+      },
+    },
+    admins: {
+      providesTags: ['User'],
+      prepareHeaders: (headers, { getState }) => {
+        const token = getState().auth.userInfo?.token;
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+        return headers;
+      },
+    },
+    getUserById: {
+      providesTags: ['User'],
+      prepareHeaders: (headers, { getState }) => {
+        const token = getState().auth.userInfo?.token;
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+        return headers;
+      },
+    },
+    deleteUser: {
+      invalidatesTags: ['User'],
+      prepareHeaders: (headers, { getState }) => {
+        const token = getState().auth.userInfo?.token;
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+        return headers;
+      },
+    },
+    updateUser: {
+      invalidatesTags: ['User'],
+      prepareHeaders: (headers, { getState }) => {
+        const token = getState().auth.userInfo?.token;
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+        return headers;
+      },
+    },
+  },
 });
 
 export const {
@@ -104,5 +185,5 @@ export const {
   useDeleteUserMutation,
   useUpdateUserMutation,
   useGetUserByIdQuery,
-  useAdminsQuery
-} = usersApiSlice;
+  useAdminsQuery,
+} = enhancedUsersApiSlice;

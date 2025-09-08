@@ -1,48 +1,50 @@
-import mongoose from 'mongoose';
-import users from './data/users.js';
-import products from './data/products.js';
-import User from './models/userModel.js';
+import { sequelize } from './config/db.js';
+import { User } from '../models/userModel.js';
 import Product from './models/productModel.js';
 import Order from './models/orderModel.js';
-import connectDB from './config/db.js';
+import users from './data/users.js';
+import products from './data/products.js';
 import colors from 'colors';
 import 'dotenv/config';
 
-connectDB();
-
 const importData = async () => {
   try {
-    await Order.deleteMany();
-    await User.deleteMany();
-    await Product.deleteMany();
+    // Sync database (create tables if they don't exist)
+    await sequelize.sync({ force: true });
 
-    const createUsers = await User.insertMany(users);
+    // Seed users
+    const createdUsers = await User.bulkCreate(users, { validate: true });
+    console.log('Users seeded successfully'.green);
 
-    const adminUser = createUsers[0]._id;
+    // Get admin user ID
+    const adminUser = createdUsers.find(user => user.isAdmin);
 
-    const sampleProducts = products.map(product => {
-      return { ...product, user: adminUser };
-    });
+    // Seed products (assign to admin user)
+    const sampleProducts = products.map(product => ({
+      ...product,
+      userId: adminUser.id, // Sequelize uses integer id
+    }));
 
-    await Product.insertMany(sampleProducts);
+    await Product.bulkCreate(sampleProducts, { validate: true });
+    console.log('Products seeded successfully'.green);
+
+    // Note: Orders are not seeded since no sample data is provided
     console.log('Data Imported!'.green.inverse);
     process.exit();
   } catch (error) {
-    console.log(`Error: ${error.message}`.red.inverse);
+    console.error(`Error: ${error.message}`.red.inverse);
     process.exit(1);
   }
 };
 
 const destroyData = async () => {
   try {
-    await Order.deleteMany();
-    await User.deleteMany();
-    await Product.deleteMany();
-
+    // Drop all tables
+    await sequelize.sync({ force: true });
     console.log('Data Destroyed!'.red.inverse);
     process.exit();
   } catch (error) {
-    console.log(`Error: ${error.message}`.red.inverse);
+    console.error(`Error: ${error.message}`.red.inverse);
     process.exit(1);
   }
 };

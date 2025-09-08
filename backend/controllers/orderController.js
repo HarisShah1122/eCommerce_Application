@@ -1,4 +1,4 @@
-import Order from '../models/orderModel.js';
+import { Order } from "../models/orderModel.js";
 
 // @desc     Create new order
 // @method   POST
