@@ -140,7 +140,6 @@ const createProductReview = async (req, res, next) => {
     const reviews = product.reviews || [];
 
     const alreadyReviewed = reviews.find((r) => r.userId === req.user.id);
-
     if (alreadyReviewed) {
       res.status(400);
       throw new Error("Product already reviewed");
